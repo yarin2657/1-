@@ -72,7 +72,6 @@
   .skeleton{background:linear-gradient(90deg,var(--surface) 25%,var(--surface2) 50%,var(--surface) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:4px;height:14px;}
   @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
   .empty-state{color:var(--text3);font-size:12px;font-family:var(--mono);padding:10px 4px;}
-  .manual-badge{display:inline-block;font-family:var(--mono);font-size:9px;padding:2px 6px;border-radius:3px;background:rgba(0,184,217,0.1);border:1px solid rgba(0,184,217,0.3);color:var(--accent2);margin-right:4px;}
   .green{color:var(--green);}
   .red{color:var(--red);}
   .gray{color:var(--text3);}
@@ -97,7 +96,6 @@
   .checkbox-row{display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:4px;}
   .checkbox-row input{width:16px;height:16px;accent-color:var(--accent);}
   .checkbox-label{font-size:13px;color:var(--text2);}
-  .info-box{background:rgba(0,184,217,0.08);border:1px solid rgba(0,184,217,0.2);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--accent2);font-family:var(--mono);margin-bottom:14px;line-height:1.6;}
   .fab{position:fixed;bottom:24px;left:24px;width:52px;height:52px;background:var(--accent);border:none;border-radius:50%;font-size:26px;color:var(--bg);cursor:pointer;z-index:50;box-shadow:0 4px 20px rgba(0,229,160,0.4);transition:all 0.2s;display:flex;align-items:center;justify-content:center;}
   .fab:hover{background:#00c988;transform:scale(1.05);}
   @media(max-width:480px){.portfolio-value{font-size:26px;}.summary-grid{gap:8px;}.summary-card{padding:10px 12px;}.summary-value{font-size:13px;}.form-row{grid-template-columns:1fr;}}
@@ -130,7 +128,7 @@
   </div>
   <div class="section-title">// ני"ע אמריקאיים — USD</div>
   <div class="stocks-list" id="usdStocks"></div>
-  <div class="section-title">// ני"ע ישראליים — ILS <span class="manual-badge">עדכון ידני</span></div>
+  <div class="section-title">// ני"ע ישראליים — ILS</div>
   <div class="stocks-list" id="ilsStocks"></div>
   <div class="section-title">// ני"ע קנדיים — CAD</div>
   <div class="stocks-list" id="cadStocks"></div>
@@ -144,10 +142,6 @@
       <span id="modalTitle">➕ הוסף נייר ערך</span>
       <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
-    <div id="infoBox" class="info-box" style="display:none">
-      ℹ️ מניות ישראליות (ILS) מתעדכנות ידנית בלבד.<br>
-      לחץ ✏️ עריכה ועדכן את המחיר הנוכחי בשדה "מחיר נוכחי ידני".
-    </div>
     <div class="form-group">
       <label class="form-label">שם החברה / הקרן</label>
       <input class="form-input" id="inputName" placeholder="לדוגמה: Apple Inc" />
@@ -159,7 +153,7 @@
       </div>
       <div class="form-group">
         <label class="form-label">מטבע</label>
-        <select class="form-select" id="inputCurrency" onchange="onCurrencyChange()">
+        <select class="form-select" id="inputCurrency">
           <option value="USD">USD — דולר</option>
           <option value="ILS">ILS — שקל</option>
           <option value="CAD">CAD — קנדי</option>
@@ -176,9 +170,12 @@
         <input class="form-input" id="inputCost" type="number" placeholder="150.00" min="0" step="0.01" />
       </div>
     </div>
-    <div class="form-group" id="manualPriceGroup" style="display:none">
-      <label class="form-label">מחיר נוכחי ידני (אופציונלי)</label>
-      <input class="form-input" id="inputManualPrice" type="number" placeholder="הכנס מחיר נוכחי" min="0" step="0.01" />
+    <div class="form-group">
+      <label class="form-label">בורסת תל אביב?</label>
+      <label class="checkbox-row">
+        <input type="checkbox" id="inputTLV">
+        <span class="checkbox-label">כן — נסחרת בת"א (מחיר באגורות)</span>
+      </label>
     </div>
     <div class="form-error" id="formError">נא למלא את כל השדות</div>
     <div class="modal-actions">
@@ -189,106 +186,90 @@
 </div>
 
 <script>
-const FINNHUB_KEY = 'd8g2681r01qlgcugqdagd8g2681r01qlgcugqdb0';
 let usdRate=3.65, cadRate=2.68;
 let prices={};
 let countdownVal=60, countdownTimer=null;
 let editingId=null;
 
 const DEFAULTS=[
-  {id:1,name:'Advanced Micro Devices',ticker:'AMD',qty:7,cost:155.82,currency:'USD',manualPrice:null},
-  {id:2,name:'Alpha Tau Medical',ticker:'DRTS',qty:500,cost:4.39,currency:'USD',manualPrice:null},
-  {id:3,name:'ASP Isotopes',ticker:'ASPI',qty:300,cost:7.54,currency:'USD',manualPrice:null},
-  {id:4,name:'Ondas Holdings',ticker:'ONDS',qty:100,cost:10.36,currency:'USD',manualPrice:null},
-  {id:5,name:'Reviva Pharmaceuticals',ticker:'RVPH',qty:50,cost:14.15,currency:'USD',manualPrice:null},
-  {id:6,name:"נופר אנרג'י",ticker:'NOFR',qty:50,cost:147,currency:'ILS',manualPrice:null},
-  {id:7,name:'תכלית TTF ביטחוניות',ticker:'0P0001YKU4',qty:20000,cost:1.26,currency:'ILS',manualPrice:null},
-  {id:8,name:'iShares S&P 500 TA',ticker:'iSFF702',qty:4,cost:2369.4,currency:'ILS',manualPrice:null},
-  {id:9,name:'MTF תשתיות לאומיות',ticker:'0P0001JP5N',qty:5000,cost:2.7226,currency:'ILS',manualPrice:null},
-  {id:10,name:'הבורסה לניע בתא',ticker:'TASE',qty:44,cost:158.11,currency:'ILS',manualPrice:null},
-  {id:11,name:'Alset AI Ventures',ticker:'GPUS',qty:600,cost:1.12,currency:'CAD',manualPrice:null},
+  {id:1,name:'Advanced Micro Devices',ticker:'AMD',qty:7,cost:155.82,currency:'USD',tlv:false},
+  {id:2,name:'Alpha Tau Medical',ticker:'DRTS',qty:500,cost:4.39,currency:'USD',tlv:false},
+  {id:3,name:'ASP Isotopes',ticker:'ASPI',qty:300,cost:7.54,currency:'USD',tlv:false},
+  {id:4,name:'Ondas Holdings',ticker:'ONDS',qty:100,cost:10.36,currency:'USD',tlv:false},
+  {id:5,name:'Reviva Pharmaceuticals',ticker:'RVPH',qty:50,cost:14.15,currency:'USD',tlv:false},
+  {id:6,name:"נופר אנרג'י",ticker:'NOFR',qty:50,cost:147,currency:'ILS',tlv:true},
+  {id:7,name:'תכלית TTF ביטחוניות',ticker:'0P0001YKU4',qty:20000,cost:1.26,currency:'ILS',tlv:true},
+  {id:8,name:'iShares S&P 500 TA',ticker:'iSFF702',qty:4,cost:2369.4,currency:'ILS',tlv:true},
+  {id:9,name:'MTF תשתיות לאומיות',ticker:'0P0001JP5N',qty:5000,cost:2.7226,currency:'ILS',tlv:true},
+  {id:10,name:'הבורסה לניע בתא',ticker:'TASE',qty:44,cost:158.11,currency:'ILS',tlv:true},
+  {id:11,name:'Alset AI Ventures',ticker:'GPUS',qty:600,cost:1.12,currency:'CAD',tlv:false},
 ];
 
-function loadPortfolio(){const s=localStorage.getItem('portfolio_v3');return s?JSON.parse(s):[...DEFAULTS];}
-function savePortfolio(p){localStorage.setItem('portfolio_v3',JSON.stringify(p));}
+function loadPortfolio(){const s=localStorage.getItem('portfolio_v4');return s?JSON.parse(s):[...DEFAULTS];}
+function savePortfolio(p){localStorage.setItem('portfolio_v4',JSON.stringify(p));}
 function nextId(){return portfolio.length?Math.max(...portfolio.map(s=>s.id))+1:1;}
 let portfolio=loadPortfolio();
 
-function onCurrencyChange(){
-  const cur=document.getElementById('inputCurrency').value;
-  const isILS=cur==='ILS';
-  document.getElementById('manualPriceGroup').style.display=isILS?'block':'none';
-  document.getElementById('infoBox').style.display=isILS?'block':'none';
-}
-
 // ═══════════════════════════════
-// FETCH — Finnhub API
+// FETCH — Yahoo Finance ישירות (עובד כאתר)
 // ═══════════════════════════════
-async function fetchFinnhub(symbol){
+async function fetchYahoo(symbols){
   try{
-    const r=await fetch(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${FINNHUB_KEY}`,
-      {signal:AbortSignal.timeout(8000)});
+    const url=`https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbols.join(',')}&fields=regularMarketPrice`;
+    const r=await fetch(url,{signal:AbortSignal.timeout(10000)});
     const d=await r.json();
-    if(d && d.c && d.c>0) return d.c;
-  }catch(e){}
-  return null;
-}
-
-async function fetchForex(from,to){
-  try{
-    const r=await fetch(`https://finnhub.io/api/v1/forex/rates?base=${from}&token=${FINNHUB_KEY}`,
-      {signal:AbortSignal.timeout(8000)});
-    const d=await r.json();
-    return d?.quote?.[to]||null;
-  }catch(e){}
-  return null;
+    return d?.quoteResponse?.result||[];
+  }catch(e){return[];}
 }
 
 async function fetchAllPrices(){
   setStatus('loading','מושך מחירים...');
   document.getElementById('refreshBtn').disabled=true;
 
-  // שער מטבע
-  const [usdil,cadil]=await Promise.all([
-    fetchForex('USD','ILS'),
-    fetchForex('CAD','ILS')
-  ]);
-  if(usdil) usdRate=usdil;
-  if(cadil) cadRate=cadil;
+  // בנה רשימת סימולים
+  const usdSyms=portfolio.filter(s=>s.currency==='USD').map(s=>s.ticker);
+  const cadSyms=portfolio.filter(s=>s.currency==='CAD').map(s=>s.ticker);
+  const ilsSyms=portfolio.filter(s=>s.currency==='ILS').map(s=>s.tlv?s.ticker+'.TA':s.ticker);
+  const fxSyms=['USDILS=X','CADILS=X'];
 
-  // מניות שדורשות API (לא ILS)
-  const apiStocks=portfolio.filter(s=>s.currency!=='ILS');
-  const results=await Promise.allSettled(
-    apiStocks.map(s=>fetchFinnhub(s.ticker).then(p=>({id:s.id,ticker:s.ticker,price:p})))
-  );
+  const allSyms=[...usdSyms,...cadSyms,...ilsSyms,...fxSyms];
+
+  // פיצול לקבוצות של 10 (מגבלת Yahoo)
+  const chunks=[];
+  for(let i=0;i<allSyms.length;i+=10) chunks.push(allSyms.slice(i,i+10));
+
+  const allResults=[];
+  await Promise.all(chunks.map(async chunk=>{
+    const r=await fetchYahoo(chunk);
+    allResults.push(...r);
+  }));
 
   let successCount=0;
-  results.forEach(r=>{
-    if(r.status==='fulfilled'&&r.value.price!=null){
-      prices[r.value.ticker]=r.value.price;
+  allResults.forEach(q=>{
+    if(q.symbol==='USDILS=X'){usdRate=q.regularMarketPrice||usdRate;return;}
+    if(q.symbol==='CADILS=X'){cadRate=q.regularMarketPrice||cadRate;return;}
+
+    // מניות ת"א — Yahoo מחזיר אגורות
+    const isTLV=q.symbol.endsWith('.TA');
+    const key=q.symbol.replace('.TA','');
+    const price=q.regularMarketPrice;
+    if(price&&price>0){
+      prices[key]=isTLV?price/100:price;
       successCount++;
     }
-  });
-
-  // מניות ישראליות — מחיר ידני
-  portfolio.filter(s=>s.currency==='ILS').forEach(s=>{
-    if(s.manualPrice!=null) prices[s.ticker]=s.manualPrice;
   });
 
   document.getElementById('refreshBtn').disabled=false;
   const time=new Date().toLocaleTimeString('he-IL');
   document.getElementById('lastUpdate').textContent=time;
 
-  const ilsCount=portfolio.filter(s=>s.currency==='ILS'&&s.manualPrice!=null).length;
-  const total=apiStocks.length+ilsCount;
-  const got=successCount+ilsCount;
-
-  if(got===0){
+  const total=portfolio.length;
+  if(successCount===0){
     setStatus('error','לא ניתן לקבל מחירים');
-  } else if(successCount<apiStocks.length){
-    setStatus('error',`${successCount}/${apiStocks.length} ניירות אמריקאיים — ${time}`);
+  } else if(successCount<total){
+    setStatus('error',`${successCount}/${total} ניירות עודכנו — ${time}`);
   } else {
-    setStatus('ok',`עודכן בהצלחה — ${time}`);
+    setStatus('ok',`כל ${successCount} הניירות עודכנו — ${time}`);
   }
 
   renderAll();
@@ -301,8 +282,6 @@ async function fetchAllPrices(){
 function openModal(id=null){
   editingId=id;
   document.getElementById('formError').style.display='none';
-  document.getElementById('manualPriceGroup').style.display='none';
-  document.getElementById('infoBox').style.display='none';
   if(id!==null){
     const s=portfolio.find(x=>x.id===id);
     document.getElementById('modalTitle').textContent='✏️ עריכת נייר ערך';
@@ -311,15 +290,12 @@ function openModal(id=null){
     document.getElementById('inputCurrency').value=s.currency;
     document.getElementById('inputQty').value=s.qty;
     document.getElementById('inputCost').value=s.cost;
-    document.getElementById('inputManualPrice').value=s.manualPrice||'';
-    if(s.currency==='ILS'){
-      document.getElementById('manualPriceGroup').style.display='block';
-      document.getElementById('infoBox').style.display='block';
-    }
+    document.getElementById('inputTLV').checked=s.tlv||false;
   } else {
     document.getElementById('modalTitle').textContent='➕ הוסף נייר ערך';
-    ['inputName','inputTicker','inputQty','inputCost','inputManualPrice'].forEach(i=>document.getElementById(i).value='');
+    ['inputName','inputTicker','inputQty','inputCost'].forEach(i=>document.getElementById(i).value='');
     document.getElementById('inputCurrency').value='USD';
+    document.getElementById('inputTLV').checked=false;
   }
   document.getElementById('modalOverlay').classList.add('active');
   setTimeout(()=>document.getElementById('inputName').focus(),200);
@@ -336,16 +312,12 @@ function saveStock(){
   const currency=document.getElementById('inputCurrency').value;
   const qty=parseFloat(document.getElementById('inputQty').value);
   const cost=parseFloat(document.getElementById('inputCost').value);
-  const manualRaw=document.getElementById('inputManualPrice').value;
-  const manualPrice=manualRaw?parseFloat(manualRaw):null;
-
+  const tlv=document.getElementById('inputTLV').checked;
   if(!name||!ticker||isNaN(qty)||isNaN(cost)||qty<=0||cost<=0){
     document.getElementById('formError').style.display='block';return;
   }
   document.getElementById('formError').style.display='none';
-
-  const entry={id:editingId!==null?editingId:nextId(),name,ticker,qty,cost,currency,manualPrice};
-
+  const entry={id:editingId!==null?editingId:nextId(),name,ticker,qty,cost,currency,tlv};
   if(editingId!==null){
     const idx=portfolio.findIndex(x=>x.id===editingId);
     portfolio[idx]=entry;
@@ -361,7 +333,6 @@ function deleteStock(id){
   if(!confirm('למחוק את הנייר?'))return;
   portfolio=portfolio.filter(x=>x.id!==id);
   savePortfolio(portfolio);
-  prices={};
   renderAll();
 }
 
@@ -375,7 +346,6 @@ function fmtC(n,c){if(n==null||isNaN(n))return'—';const s=c==='USD'?'$':c==='C
 function renderStockCard(stock,delay){
   const price=prices[stock.ticker];
   const has=price!=null&&price>0;
-  const isManual=stock.currency==='ILS';
   let pnl=null,pct=null,val=null;
   if(has){val=price*stock.qty;pnl=val-stock.cost*stock.qty;pct=((price-stock.cost)/stock.cost)*100;}
   const cls=!has?'neutral':pnl>=0?'profit':'loss';
@@ -383,20 +353,15 @@ function renderStockCard(stock,delay){
   const card=document.createElement('div');
   card.className=`stock-card ${cls}`;
   card.style.animationDelay=`${delay*60}ms`;
-
-  const noPrice=isManual
-    ?`<div class="stock-price gray" style="font-size:12px">הכנס מחיר ידני<br>דרך ✏️ עריכה</div>`
-    :`<div class="stock-price"><div class="skeleton" style="width:70px"></div></div>`;
-
   card.innerHTML=`
     <div class="stock-row1">
       <div>
         <div class="stock-name">${stock.name}</div>
-        <div class="stock-ticker">${stock.ticker}${isManual?' <span class="manual-badge">ידני</span>':''}</div>
+        <div class="stock-ticker">${stock.ticker}</div>
         <div class="currency-badge">${stock.currency}</div>
       </div>
       <div style="text-align:left">
-        ${has?`<div class="stock-price ${col}">${fmtC(price,stock.currency)}</div>`:noPrice}
+        ${has?`<div class="stock-price ${col}">${fmtC(price,stock.currency)}</div>`:`<div class="stock-price"><div class="skeleton" style="width:70px"></div></div>`}
         <div class="stock-price-label">מחיר נוכחי</div>
       </div>
     </div>
@@ -409,7 +374,7 @@ function renderStockCard(stock,delay){
       <div class="stock-pnl">
         ${has
           ?`<div class="pnl-amount ${col}">${pnl>=0?'+':''}${fmtC(pnl,stock.currency)}</div><div class="pnl-pct ${col}">${pct>=0?'+':''}${fmt(pct)}%</div>`
-          :`<div style="color:var(--text3);font-size:11px;font-family:var(--mono)">—</div>`}
+          :`<div class="skeleton" style="width:60px;margin-bottom:4px"></div><div class="skeleton" style="width:40px"></div>`}
       </div>
     </div>
     <div class="stock-actions">
