@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>תיק השקעות</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Heebo:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0a0a0f;--surface:#111118;--surface2:#1a1a24;--border:#2a2a3a;
+    --accent:#00e5a0;--accent2:#00b8d9;--red:#ff4d6d;--green:#00e5a0;
+    --text:#e8e8f0;--text2:#888899;--text3:#555566;
+    --mono:'IBM Plex Mono',monospace;--sans:'Heebo',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;overflow-x:hidden;}
+  body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,229,160,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,160,0.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+  .container{position:relative;z-index:1;max-width:900px;margin:0 auto;padding:20px 16px 80px;}
+  header{padding:24px 0 20px;border-bottom:1px solid var(--border);margin-bottom:20px;}
+  .header-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;}
+  .header-title{font-size:13px;color:var(--text3);font-family:var(--mono);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;}
+  .portfolio-value{font-family:var(--mono);font-size:36px;font-weight:600;color:var(--text);letter-spacing:-1px;}
+  .portfolio-change{font-family:var(--mono);font-size:14px;margin-top:4px;}
+  .header-actions{display:flex;flex-direction:column;align-items:flex-end;gap:8px;}
+  .btn{border:1px solid var(--border);font-family:var(--mono);font-size:12px;padding:8px 16px;border-radius:6px;cursor:pointer;transition:all 0.2s;letter-spacing:1px;white-space:nowrap;}
+  .btn-accent{background:var(--surface2);color:var(--accent);}
+  .btn-accent:hover{background:var(--accent);color:var(--bg);border-color:var(--accent);}
+  .btn-accent:disabled{opacity:0.5;cursor:not-allowed;}
+  .btn-add{background:var(--accent);color:var(--bg);border-color:var(--accent);font-weight:600;}
+  .btn-add:hover{background:#00c988;}
+  .btn-danger{background:rgba(255,77,109,0.1);color:var(--red);border-color:rgba(255,77,109,0.3);font-size:11px;padding:5px 10px;}
+  .btn-danger:hover{background:var(--red);color:white;}
+  .btn-edit{background:rgba(0,184,217,0.1);color:var(--accent2);border-color:rgba(0,184,217,0.3);font-size:11px;padding:5px 10px;}
+  .btn-edit:hover{background:var(--accent2);color:var(--bg);}
+  .btn-cancel{background:var(--surface2);color:var(--text2);border-color:var(--border);}
+  .btn-cancel:hover{color:var(--text);}
+  .last-update{font-size:11px;color:var(--text3);font-family:var(--mono);}
+  .auto-refresh{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text3);font-family:var(--mono);}
+  .countdown{color:var(--accent2);}
+  .status-bar{display:flex;gap:8px;align-items:center;margin-bottom:20px;font-size:11px;font-family:var(--mono);color:var(--text3);}
+  .status-dot{width:6px;height:6px;border-radius:50%;background:var(--text3);}
+  .status-dot.loading{background:var(--accent2);animation:pulse 1s infinite;}
+  .status-dot.ok{background:var(--green);}
+  .status-dot.error{background:var(--red);}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+  .summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px;}
+  .summary-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;}
+  .summary-label{font-size:10px;color:var(--text3);font-family:var(--mono);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;}
+  .summary-value{font-family:var(--mono);font-size:16px;font-weight:600;}
+  .section-title{font-size:10px;color:var(--text3);font-family:var(--mono);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;padding-right:4px;}
+  .stocks-list{display:flex;flex-direction:column;gap:8px;margin-bottom:20px;}
+  .stock-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;animation:fadeIn 0.3s ease forwards;opacity:0;}
+  .stock-card.profit{border-right:3px solid var(--green);}
+  .stock-card.loss{border-right:3px solid var(--red);}
+  .stock-card.neutral{border-right:3px solid var(--text3);}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  .stock-row1{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;}
+  .stock-name{font-size:14px;font-weight:600;color:var(--text);}
+  .stock-ticker{font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:2px;}
+  .stock-price{font-family:var(--mono);font-size:16px;font-weight:600;text-align:left;}
+  .stock-price-label{font-size:10px;color:var(--text3);font-family:var(--mono);text-align:left;margin-top:2px;}
+  .stock-row2{display:flex;justify-content:space-between;align-items:center;padding-top:8px;border-top:1px solid var(--border);}
+  .stock-meta{display:flex;gap:12px;flex-wrap:wrap;}
+  .meta-item{display:flex;flex-direction:column;gap:2px;}
+  .meta-label{font-size:9px;color:var(--text3);font-family:var(--mono);letter-spacing:0.5px;}
+  .meta-value{font-family:var(--mono);font-size:12px;color:var(--text2);}
+  .stock-pnl{text-align:left;}
+  .pnl-amount{font-family:var(--mono);font-size:14px;font-weight:600;}
+  .pnl-pct{font-family:var(--mono);font-size:11px;text-align:left;margin-top:2px;}
+  .stock-actions{display:flex;gap:6px;margin-top:10px;padding-top:8px;border-top:1px solid var(--border);justify-content:flex-end;}
+  .currency-badge{display:inline-block;font-family:var(--mono);font-size:9px;padding:2px 6px;border-radius:3px;background:var(--surface2);border:1px solid var(--border);color:var(--text3);margin-top:3px;}
+  .skeleton{background:linear-gradient(90deg,var(--surface) 25%,var(--surface2) 50%,var(--surface) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:4px;height:14px;}
+  @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+  .empty-state{color:var(--text3);font-size:12px;font-family:var(--mono);padding:10px 4px;}
+  .manual-badge{display:inline-block;font-family:var(--mono);font-size:9px;padding:2px 6px;border-radius:3px;background:rgba(0,184,217,0.1);border:1px solid rgba(0,184,217,0.3);color:var(--accent2);margin-right:4px;}
+  .green{color:var(--green);}
+  .red{color:var(--red);}
+  .gray{color:var(--text3);}
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(4px);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px;opacity:0;pointer-events:none;transition:opacity 0.2s;}
+  .modal-overlay.active{opacity:1;pointer-events:all;}
+  .modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;width:100%;max-width:420px;transform:translateY(20px);transition:transform 0.2s;max-height:90vh;overflow-y:auto;}
+  .modal-overlay.active .modal{transform:translateY(0);}
+  .modal-title{font-size:16px;font-weight:700;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;}
+  .modal-close{background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer;line-height:1;padding:4px;}
+  .modal-close:hover{color:var(--text);}
+  .form-group{margin-bottom:14px;}
+  .form-label{font-size:11px;color:var(--text3);font-family:var(--mono);letter-spacing:1px;margin-bottom:6px;display:block;}
+  .form-input{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--sans);font-size:14px;padding:10px 12px;border-radius:8px;outline:none;transition:border-color 0.2s;}
+  .form-input:focus{border-color:var(--accent);}
+  .form-input::placeholder{color:var(--text3);}
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .form-select{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--sans);font-size:14px;padding:10px 12px;border-radius:8px;outline:none;cursor:pointer;}
+  .form-select:focus{border-color:var(--accent);}
+  .modal-actions{display:flex;gap:8px;margin-top:20px;}
+  .modal-actions .btn{flex:1;padding:12px;font-size:13px;}
+  .form-error{font-size:11px;color:var(--red);font-family:var(--mono);margin-top:8px;display:none;}
+  .checkbox-row{display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:4px;}
+  .checkbox-row input{width:16px;height:16px;accent-color:var(--accent);}
+  .checkbox-label{font-size:13px;color:var(--text2);}
+  .info-box{background:rgba(0,184,217,0.08);border:1px solid rgba(0,184,217,0.2);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--accent2);font-family:var(--mono);margin-bottom:14px;line-height:1.6;}
+  .fab{position:fixed;bottom:24px;left:24px;width:52px;height:52px;background:var(--accent);border:none;border-radius:50%;font-size:26px;color:var(--bg);cursor:pointer;z-index:50;box-shadow:0 4px 20px rgba(0,229,160,0.4);transition:all 0.2s;display:flex;align-items:center;justify-content:center;}
+  .fab:hover{background:#00c988;transform:scale(1.05);}
+  @media(max-width:480px){.portfolio-value{font-size:26px;}.summary-grid{gap:8px;}.summary-card{padding:10px 12px;}.summary-value{font-size:13px;}.form-row{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="header-top">
+      <div>
+        <div class="header-title">// תיק השקעות</div>
+        <div class="portfolio-value" id="totalValue">₪---,---</div>
+        <div class="portfolio-change" id="totalPnl">טוען...</div>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-accent" id="refreshBtn" onclick="fetchAllPrices()">↻ עדכן מחירים</button>
+        <div class="last-update" id="lastUpdate">—</div>
+        <div class="auto-refresh">עדכון בעוד <span class="countdown" id="countdown">60</span>ש'</div>
+      </div>
+    </div>
+  </header>
+  <div class="status-bar">
+    <div class="status-dot" id="statusDot"></div>
+    <span id="statusText">ממתין לעדכון...</span>
+  </div>
+  <div class="summary-grid">
+    <div class="summary-card"><div class="summary-label">עלות כוללת</div><div class="summary-value" id="totalCost">—</div></div>
+    <div class="summary-card"><div class="summary-label">רווח/הפסד</div><div class="summary-value" id="totalPnlCard">—</div></div>
+    <div class="summary-card"><div class="summary-label">תשואה כוללת</div><div class="summary-value" id="totalReturn">—</div></div>
+  </div>
+  <div class="section-title">// ני"ע אמריקאיים — USD</div>
+  <div class="stocks-list" id="usdStocks"></div>
+  <div class="section-title">// ני"ע ישראליים — ILS <span class="manual-badge">עדכון ידני</span></div>
+  <div class="stocks-list" id="ilsStocks"></div>
+  <div class="section-title">// ני"ע קנדיים — CAD</div>
+  <div class="stocks-list" id="cadStocks"></div>
+</div>
+
+<button class="fab" onclick="openModal()">+</button>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-title">
+      <span id="modalTitle">➕ הוסף נייר ערך</span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div id="infoBox" class="info-box" style="display:none">
+      ℹ️ מניות ישראליות (ILS) מתעדכנות ידנית בלבד.<br>
+      לחץ ✏️ עריכה ועדכן את המחיר הנוכחי בשדה "מחיר נוכחי ידני".
+    </div>
+    <div class="form-group">
+      <label class="form-label">שם החברה / הקרן</label>
+      <input class="form-input" id="inputName" placeholder="לדוגמה: Apple Inc" />
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">טיקר / סימול</label>
+        <input class="form-input" id="inputTicker" placeholder="AAPL" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">מטבע</label>
+        <select class="form-select" id="inputCurrency" onchange="onCurrencyChange()">
+          <option value="USD">USD — דולר</option>
+          <option value="ILS">ILS — שקל</option>
+          <option value="CAD">CAD — קנדי</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">כמות</label>
+        <input class="form-input" id="inputQty" type="number" placeholder="100" min="0" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">מחיר קנייה (עלות)</label>
+        <input class="form-input" id="inputCost" type="number" placeholder="150.00" min="0" step="0.01" />
+      </div>
+    </div>
+    <div class="form-group" id="manualPriceGroup" style="display:none">
+      <label class="form-label">מחיר נוכחי ידני (אופציונלי)</label>
+      <input class="form-input" id="inputManualPrice" type="number" placeholder="הכנס מחיר נוכחי" min="0" step="0.01" />
+    </div>
+    <div class="form-error" id="formError">נא למלא את כל השדות</div>
+    <div class="modal-actions">
+      <button class="btn btn-cancel" onclick="closeModal()">ביטול</button>
+      <button class="btn btn-add" onclick="saveStock()">שמור</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const FINNHUB_KEY = 'd8g2681r01qlgcugqdagd8g2681r01qlgcugqdb0';
+let usdRate=3.65, cadRate=2.68;
+let prices={};
+let countdownVal=60, countdownTimer=null;
+let editingId=null;
+
+const DEFAULTS=[
+  {id:1,name:'Advanced Micro Devices',ticker:'AMD',qty:7,cost:155.82,currency:'USD',manualPrice:null},
+  {id:2,name:'Alpha Tau Medical',ticker:'DRTS',qty:500,cost:4.39,currency:'USD',manualPrice:null},
+  {id:3,name:'ASP Isotopes',ticker:'ASPI',qty:300,cost:7.54,currency:'USD',manualPrice:null},
+  {id:4,name:'Ondas Holdings',ticker:'ONDS',qty:100,cost:10.36,currency:'USD',manualPrice:null},
+  {id:5,name:'Reviva Pharmaceuticals',ticker:'RVPH',qty:50,cost:14.15,currency:'USD',manualPrice:null},
+  {id:6,name:"נופר אנרג'י",ticker:'NOFR',qty:50,cost:147,currency:'ILS',manualPrice:null},
+  {id:7,name:'תכלית TTF ביטחוניות',ticker:'0P0001YKU4',qty:20000,cost:1.26,currency:'ILS',manualPrice:null},
+  {id:8,name:'iShares S&P 500 TA',ticker:'iSFF702',qty:4,cost:2369.4,currency:'ILS',manualPrice:null},
+  {id:9,name:'MTF תשתיות לאומיות',ticker:'0P0001JP5N',qty:5000,cost:2.7226,currency:'ILS',manualPrice:null},
+  {id:10,name:'הבורסה לניע בתא',ticker:'TASE',qty:44,cost:158.11,currency:'ILS',manualPrice:null},
+  {id:11,name:'Alset AI Ventures',ticker:'GPUS',qty:600,cost:1.12,currency:'CAD',manualPrice:null},
+];
+
+function loadPortfolio(){const s=localStorage.getItem('portfolio_v3');return s?JSON.parse(s):[...DEFAULTS];}
+function savePortfolio(p){localStorage.setItem('portfolio_v3',JSON.stringify(p));}
+function nextId(){return portfolio.length?Math.max(...portfolio.map(s=>s.id))+1:1;}
+let portfolio=loadPortfolio();
+
+function onCurrencyChange(){
+  const cur=document.getElementById('inputCurrency').value;
+  const isILS=cur==='ILS';
+  document.getElementById('manualPriceGroup').style.display=isILS?'block':'none';
+  document.getElementById('infoBox').style.display=isILS?'block':'none';
+}
+
+// ═══════════════════════════════
+// FETCH — Finnhub API
+// ═══════════════════════════════
+async function fetchFinnhub(symbol){
+  try{
+    const r=await fetch(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${FINNHUB_KEY}`,
+      {signal:AbortSignal.timeout(8000)});
+    const d=await r.json();
+    if(d && d.c && d.c>0) return d.c;
+  }catch(e){}
+  return null;
+}
+
+async function fetchForex(from,to){
+  try{
+    const r=await fetch(`https://finnhub.io/api/v1/forex/rates?base=${from}&token=${FINNHUB_KEY}`,
+      {signal:AbortSignal.timeout(8000)});
+    const d=await r.json();
+    return d?.quote?.[to]||null;
+  }catch(e){}
+  return null;
+}
+
+async function fetchAllPrices(){
+  setStatus('loading','מושך מחירים...');
+  document.getElementById('refreshBtn').disabled=true;
+
+  // שער מטבע
+  const [usdil,cadil]=await Promise.all([
+    fetchForex('USD','ILS'),
+    fetchForex('CAD','ILS')
+  ]);
+  if(usdil) usdRate=usdil;
+  if(cadil) cadRate=cadil;
+
+  // מניות שדורשות API (לא ILS)
+  const apiStocks=portfolio.filter(s=>s.currency!=='ILS');
+  const results=await Promise.allSettled(
+    apiStocks.map(s=>fetchFinnhub(s.ticker).then(p=>({id:s.id,ticker:s.ticker,price:p})))
+  );
+
+  let successCount=0;
+  results.forEach(r=>{
+    if(r.status==='fulfilled'&&r.value.price!=null){
+      prices[r.value.ticker]=r.value.price;
+      successCount++;
+    }
+  });
+
+  // מניות ישראליות — מחיר ידני
+  portfolio.filter(s=>s.currency==='ILS').forEach(s=>{
+    if(s.manualPrice!=null) prices[s.ticker]=s.manualPrice;
+  });
+
+  document.getElementById('refreshBtn').disabled=false;
+  const time=new Date().toLocaleTimeString('he-IL');
+  document.getElementById('lastUpdate').textContent=time;
+
+  const ilsCount=portfolio.filter(s=>s.currency==='ILS'&&s.manualPrice!=null).length;
+  const total=apiStocks.length+ilsCount;
+  const got=successCount+ilsCount;
+
+  if(got===0){
+    setStatus('error','לא ניתן לקבל מחירים');
+  } else if(successCount<apiStocks.length){
+    setStatus('error',`${successCount}/${apiStocks.length} ניירות אמריקאיים — ${time}`);
+  } else {
+    setStatus('ok',`עודכן בהצלחה — ${time}`);
+  }
+
+  renderAll();
+  resetCountdown();
+}
+
+// ═══════════════════════════════
+// MODAL
+// ═══════════════════════════════
+function openModal(id=null){
+  editingId=id;
+  document.getElementById('formError').style.display='none';
+  document.getElementById('manualPriceGroup').style.display='none';
+  document.getElementById('infoBox').style.display='none';
+  if(id!==null){
+    const s=portfolio.find(x=>x.id===id);
+    document.getElementById('modalTitle').textContent='✏️ עריכת נייר ערך';
+    document.getElementById('inputName').value=s.name;
+    document.getElementById('inputTicker').value=s.ticker;
+    document.getElementById('inputCurrency').value=s.currency;
+    document.getElementById('inputQty').value=s.qty;
+    document.getElementById('inputCost').value=s.cost;
+    document.getElementById('inputManualPrice').value=s.manualPrice||'';
+    if(s.currency==='ILS'){
+      document.getElementById('manualPriceGroup').style.display='block';
+      document.getElementById('infoBox').style.display='block';
+    }
+  } else {
+    document.getElementById('modalTitle').textContent='➕ הוסף נייר ערך';
+    ['inputName','inputTicker','inputQty','inputCost','inputManualPrice'].forEach(i=>document.getElementById(i).value='');
+    document.getElementById('inputCurrency').value='USD';
+  }
+  document.getElementById('modalOverlay').classList.add('active');
+  setTimeout(()=>document.getElementById('inputName').focus(),200);
+}
+
+function closeModal(){
+  document.getElementById('modalOverlay').classList.remove('active');
+  editingId=null;
+}
+
+function saveStock(){
+  const name=document.getElementById('inputName').value.trim();
+  const ticker=document.getElementById('inputTicker').value.trim().toUpperCase();
+  const currency=document.getElementById('inputCurrency').value;
+  const qty=parseFloat(document.getElementById('inputQty').value);
+  const cost=parseFloat(document.getElementById('inputCost').value);
+  const manualRaw=document.getElementById('inputManualPrice').value;
+  const manualPrice=manualRaw?parseFloat(manualRaw):null;
+
+  if(!name||!ticker||isNaN(qty)||isNaN(cost)||qty<=0||cost<=0){
+    document.getElementById('formError').style.display='block';return;
+  }
+  document.getElementById('formError').style.display='none';
+
+  const entry={id:editingId!==null?editingId:nextId(),name,ticker,qty,cost,currency,manualPrice};
+
+  if(editingId!==null){
+    const idx=portfolio.findIndex(x=>x.id===editingId);
+    portfolio[idx]=entry;
+  } else {
+    portfolio.push(entry);
+  }
+  savePortfolio(portfolio);
+  closeModal();
+  fetchAllPrices();
+}
+
+function deleteStock(id){
+  if(!confirm('למחוק את הנייר?'))return;
+  portfolio=portfolio.filter(x=>x.id!==id);
+  savePortfolio(portfolio);
+  prices={};
+  renderAll();
+}
+
+// ═══════════════════════════════
+// RENDER
+// ═══════════════════════════════
+function toILS(a,c){return c==='USD'?a*usdRate:c==='CAD'?a*cadRate:a;}
+function fmt(n,d=2){if(n==null||isNaN(n))return'—';return n.toLocaleString('he-IL',{minimumFractionDigits:d,maximumFractionDigits:d});}
+function fmtC(n,c){if(n==null||isNaN(n))return'—';const s=c==='USD'?'$':c==='CAD'?'C$':'₪';return s+fmt(n);}
+
+function renderStockCard(stock,delay){
+  const price=prices[stock.ticker];
+  const has=price!=null&&price>0;
+  const isManual=stock.currency==='ILS';
+  let pnl=null,pct=null,val=null;
+  if(has){val=price*stock.qty;pnl=val-stock.cost*stock.qty;pct=((price-stock.cost)/stock.cost)*100;}
+  const cls=!has?'neutral':pnl>=0?'profit':'loss';
+  const col=!has?'gray':pnl>=0?'green':'red';
+  const card=document.createElement('div');
+  card.className=`stock-card ${cls}`;
+  card.style.animationDelay=`${delay*60}ms`;
+
+  const noPrice=isManual
+    ?`<div class="stock-price gray" style="font-size:12px">הכנס מחיר ידני<br>דרך ✏️ עריכה</div>`
+    :`<div class="stock-price"><div class="skeleton" style="width:70px"></div></div>`;
+
+  card.innerHTML=`
+    <div class="stock-row1">
+      <div>
+        <div class="stock-name">${stock.name}</div>
+        <div class="stock-ticker">${stock.ticker}${isManual?' <span class="manual-badge">ידני</span>':''}</div>
+        <div class="currency-badge">${stock.currency}</div>
+      </div>
+      <div style="text-align:left">
+        ${has?`<div class="stock-price ${col}">${fmtC(price,stock.currency)}</div>`:noPrice}
+        <div class="stock-price-label">מחיר נוכחי</div>
+      </div>
+    </div>
+    <div class="stock-row2">
+      <div class="stock-meta">
+        <div class="meta-item"><div class="meta-label">כמות</div><div class="meta-value">${stock.qty.toLocaleString()}</div></div>
+        <div class="meta-item"><div class="meta-label">עלות</div><div class="meta-value">${fmtC(stock.cost,stock.currency)}</div></div>
+        <div class="meta-item"><div class="meta-label">שווי</div><div class="meta-value">${has?fmtC(val,stock.currency):'—'}</div></div>
+      </div>
+      <div class="stock-pnl">
+        ${has
+          ?`<div class="pnl-amount ${col}">${pnl>=0?'+':''}${fmtC(pnl,stock.currency)}</div><div class="pnl-pct ${col}">${pct>=0?'+':''}${fmt(pct)}%</div>`
+          :`<div style="color:var(--text3);font-size:11px;font-family:var(--mono)">—</div>`}
+      </div>
+    </div>
+    <div class="stock-actions">
+      <button class="btn btn-edit" onclick="openModal(${stock.id})">✏️ עריכה</button>
+      <button class="btn btn-danger" onclick="deleteStock(${stock.id})">🗑 מחיקה</button>
+    </div>
+  `;
+  return card;
+}
+
+function renderAll(){
+  ['USD','ILS','CAD'].forEach(cur=>{
+    const el=document.getElementById(cur.toLowerCase()+'Stocks');
+    el.innerHTML='';
+    const stocks=portfolio.filter(s=>s.currency===cur);
+    if(!stocks.length){el.innerHTML='<div class="empty-state">אין ניירות — לחץ + להוספה</div>';return;}
+    stocks.forEach((s,i)=>el.appendChild(renderStockCard(s,i)));
+  });
+
+  let costILS=0,valILS=0;
+  portfolio.forEach(s=>{
+    const c=toILS(s.cost*s.qty,s.currency);
+    costILS+=c;
+    const p=prices[s.ticker];
+    valILS+=p?toILS(p*s.qty,s.currency):c;
+  });
+  const pnlILS=valILS-costILS;
+  const retPct=costILS?(pnlILS/costILS)*100:0;
+
+  document.getElementById('totalValue').textContent=`₪${fmt(valILS,0)}`;
+  document.getElementById('totalCost').textContent=`₪${fmt(costILS,0)}`;
+  const pEl=document.getElementById('totalPnlCard');
+  pEl.textContent=`${pnlILS>=0?'+':''}₪${fmt(pnlILS,0)}`;
+  pEl.className=`summary-value ${pnlILS>=0?'green':'red'}`;
+  const rEl=document.getElementById('totalReturn');
+  rEl.textContent=`${retPct>=0?'+':''}${fmt(retPct)}%`;
+  rEl.className=`summary-value ${retPct>=0?'green':'red'}`;
+  const ph=document.getElementById('totalPnl');
+  ph.textContent=`${pnlILS>=0?'+':''}₪${fmt(pnlILS,0)} (${retPct>=0?'+':''}${fmt(retPct)}%)`;
+  ph.className=`portfolio-change ${pnlILS>=0?'green':'red'}`;
+}
+
+function setStatus(type,text){
+  document.getElementById('statusDot').className=`status-dot ${type}`;
+  document.getElementById('statusText').textContent=text;
+}
+
+function resetCountdown(){
+  countdownVal=60;
+  if(countdownTimer)clearInterval(countdownTimer);
+  countdownTimer=setInterval(()=>{
+    countdownVal--;
+    document.getElementById('countdown').textContent=countdownVal;
+    if(countdownVal<=0){clearInterval(countdownTimer);fetchAllPrices();}
+  },1000);
+}
+
+document.getElementById('modalOverlay').addEventListener('click',e=>{
+  if(e.target===e.currentTarget)closeModal();
+});
+
+renderAll();
+fetchAllPrices();
+</script>
+</body>
+</html>
